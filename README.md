@@ -1,2 +1,2 @@
 
-Update .env file with your API before executing - have fun with ChatCPT
+Update .env file with your API Key before running - have fun with ChatCPT
