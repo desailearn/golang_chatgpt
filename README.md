@@ -41,10 +41,6 @@ Using VSCode:
         This is an interactive Chat GPT! 
 
 
-
-        Here are some salesforce examples:
-
-
 Here are some salesforce examples:
 
 **  Use Case 1: Create APEX and Triggers  **
