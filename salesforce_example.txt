@@ -19,13 +19,13 @@ Output:
 ![Alt Text](Output_sf_usecase_1a.png)
 
 
-![Alt Text](Output_sf_usecase_1a.png)
+![Alt Text](Output_sf_usecase_1b.png)
 
 
-![Alt Text](Output_sf_usecase_1a.png)
+![Alt Text](Output_sf_usecase_1c.png)
 
 
-![Alt Text](Output_sf_usecase_1a.png)
+![Alt Text](Output_sf_usecase_1d.png)
 
 Use Case 2:
     Write a salesforce trigger with the  below requirements:
