@@ -12,11 +12,11 @@ Use Case 1:
 Example Output from the command line
 Input:
 
-![Alt Text](Input_sf_Usecase_1.png)
+! Image 1 (Input_sf_Usecase_1.png)
 
 Output:
 
-![Alt Text](Output_sf_usecase_1a.png)
+![Image 2](Output_sf_usecase_1a.png)
 
 
 ![Alt Text](Output_sf_usecase_1b.png)
