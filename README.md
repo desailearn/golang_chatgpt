@@ -44,12 +44,14 @@ Using VSCode:
 Here are some salesforce examples:
 
 **  Use Case 1: Create APEX and Triggers  **
-    Create a batch apex class with the below requirements.	
+    
+    Create a salesforce batch apex class with the below requirements.	
           Create a task for a case owner that’s in an open state.
           Assign a due date to the  task as one week from now
           Create an email auto-trigger as a daily reminder until the case is closed
           After completing attach the completed case to the  task to case id “XXXXXXX”
           Write unit test cases for triggers and classes.
+          
        
 **        Command line Input:  (Screenshot)   **        
                 ![Input](Input_sf_Usecase_1.png)
