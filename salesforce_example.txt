@@ -1,1 +1,29 @@
-salesfor
+Here are some salesforce examples:
+
+Create APEX and Triggers
+Use Case 1:
+    Create a batch apex class with the below requirements.	
+          Create a task for a case owner that’s in an open state.
+          Assign a due date to the  task as one week from now
+          Create an email auto-trigger as a daily reminder until the case is closed
+          After completing attach the completed case to the  task to case id “XXXXXXX”
+          Write unit test cases for triggers and classes.
+
+Example Output from the command line
+Input:
+
+Output:
+
+Use Case 2:
+    Write a salesforce trigger with the  below requirements:
+        Whenever an  account is deactivated trigger an external API end-point with the below payload 
+            accountID 
+            accountname
+            dateDisabled
+            array: impactedContacts
+        Diabale all the associated contacts
+
+Example Output from the command line
+Input:
+
+Output:
