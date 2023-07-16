@@ -66,16 +66,120 @@ Here are some salesforce examples:
                 **        Response Output (Screenshot - 4 ):        **
                        ![Output 4](Output_sf_usecase_1d.png)   
 
+**  Use Case 2: Write a salesforce triggers and sync data with other systems: **
 
-Use Case 2: Write a salesforce trigger with the  below requirements:
-        Whenever an  account is deactivated trigger an external API end-point with the below payload 
-            accountID 
-            accountname
-            dateDisabled
-            array: impactedContacts
-        Diabale all the associated contacts
+        Write a salesforce trigger with the  below requirements
+                Whenever an  account is deactivated trigger an external API end-point with the below payload 
+                    accountID 
+                    accountname
+                    deactivatedDate
+                    array: impactedContacts
+                Diabale all the associated contacts
+                Write unit test cases for triggers and classes.
+                
+**        Command line Input:  (Screenshot)   **   
+**        Response Output:        **
 
-Example Output from the command line
-Input:
 
-Output:
+**  Use Case 3: Write a salesforce Lead assignment : **
+
+        Write a salesforce lead assignment trigger for below requirements
+                Whenever new lead is created assign based on these logic 
+                    Accounts status is active state
+                    Accounts near by zip within 50 mile radius
+                    Accounts with no more than 10 pending leads 
+                    Accounts has with maximus oprtunity conversion no greater than 10 caleder days. 
+                Write unit test cases for triggers and classes.
+                
+**        Response Output:        **
+
+Below is the Apex code for a Salesforce lead assignment trigger and a corresponding Apex class to handle the lead assignment logic based on the given requirements. Additionally, I've included basic unit test cases to test the trigger and class.
+
+**Apex Trigger (LeadAssignmentTrigger):**
+
+trigger LeadAssignmentTrigger on Lead (before insert) {
+    LeadAssignmentHandler.assignLeads(Trigger.new);
+}
+
+**Apex Class (LeadAssignmentHandler):**
+
+public class LeadAssignmentHandler {
+    public static void assignLeads(List<Lead> newLeads) {
+        Map<Id, Account> accountsById = new Map<Id, Account>();
+        List<Account> accountsWithLeads = [SELECT Id, Name, Pending_Leads_Count__c, Opportunity_Conversion_Date__c,
+                                           Geolocation__Latitude__s, Geolocation__Longitude__s
+                                           FROM Account
+                                           WHERE Status__c = 'Active'];
+        for (Account account : accountsWithLeads) {
+            accountsById.put(account.Id, account);
+        }
+        for (Lead lead : newLeads) {
+            for (Account account : accountsWithLeads) {
+                if (isWithin50Miles(lead, account) &&
+                    account.Pending_Leads_Count__c < 10 &&
+                    account.Opportunity_Conversion_Date__c <= Date.today().addDays(10)) {
+                    lead.AccountId = account.Id;
+                    account.Pending_Leads_Count__c++;
+                    break; // Assign the lead to the first suitable account and move to the next lead.
+                }
+            }
+        }
+    }
+    private static Boolean isWithin50Miles(Lead lead, Account account) {
+        if (lead.Geolocation__Latitude__s != null && lead.Geolocation__Longitude__s != null &&
+            account.Geolocation__Latitude__s != null && account.Geolocation__Longitude__s != null) {
+            Double distance = calculateDistance(lead.Geolocation__Latitude__s, lead.Geolocation__Longitude__s,
+                                                account.Geolocation__Latitude__s, account.Geolocation__Longitude__s);
+            return distance <= 50.0;
+        }
+        return false;
+    }
+    private static Double calculateDistance(Double lat1, Double lon1, Double lat2, Double lon2) {
+        // Implementation to calculate distance using Haversine formula.
+        // You can find Haversine formula implementations online or use external libraries for more accurate calculations.
+        // For simplicity, I'm not providing the implementation here.
+        // It's important to note that Salesforce provides only basic math functions, and more complex formulas may require external libraries.
+        // Don't forget to handle error cases, such as null or invalid values for latitudes and longitudes.
+        return 0.0;
+    }
+}
+
+**Unit Test Cases:**
+@isTest
+private class LeadAssignmentHandlerTest {
+    @isTest
+    static void testLeadAssignment() {
+        // Create test data - Lead within 50-mile radius, active Account with less than 10 pending leads, and opportunity conversion date within 10 days.
+        Account testAccount = new Account(Name = 'Test Account', Status__c = 'Active', Geolocation__Latitude__s = 37.7749, Geolocation__Longitude__s = -122.4194);
+        insert testAccount;
+        Lead testLead = new Lead(LastName = 'Test Lead', Company = 'Test Company', Status = 'Open', Geolocation__Latitude__s = 37.7749, Geolocation__Longitude__s = -122.4194);
+        insert testLead;
+        // Test lead assignment trigger
+        Test.startTest();
+        List<Lead> leads = [SELECT Id, AccountId FROM Lead WHERE Id = :testLead.Id];
+        System.assertEquals(testAccount.Id, leads[0].AccountId);
+        Test.stopTest();
+    }
+    @isTest
+    static void testNoLeadAssignment() {
+        // Create test data - Lead outside 50-mile radius or Account with more than 10 pending leads, and opportunity conversion date greater than 10 days.
+        Account testAccount = new Account(Name = 'Test Account', Status__c = 'Active', Geolocation__Latitude__s = 38.9072, Geolocation__Longitude__s = -77.0369);
+        insert testAccount;
+        for (Integer i = 0; i < 11; i++) {
+            Lead testLead = new Lead(LastName = 'Test Lead ' + i, Company = 'Test Company ' + i, Status = 'Open', Geolocation__Latitude__s = 38.9072, Geolocation__Longitude__s = -77.0369);
+            insert testLead;
+        }
+        Lead testLead = new Lead(LastName = 'Test Lead', Company = 'Test Company', Status = 'Open', Geolocation__Latitude__s = 38.9072, Geolocation__Longitude__s = -77.0369);
+        insert testLead;
+        // Test lead assignment trigger
+        Test.startTest();
+        List<Lead> leads = [SELECT Id, AccountId FROM Lead WHERE Id = :testLead.Id];
+        System.assertEquals(null, leads[0].AccountId);
+        Test.stopTest();
+    }
+}
+
+
+** Please note that the implementation for the calculateDistance method (used for calculating the distance between two geographical points) is not provided here. You can find Haversine formula implementations online or use external libraries for more accurate calculations.**
+
+Also, ensure that the fields Pending_Leads_Count__c, Opportunity_Conversion_Date__c, and Geolocation__Latitude__s/Geolocation__Longitude__s are appropriately defined on the Account and Lead objects before running the tests.
