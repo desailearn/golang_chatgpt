@@ -83,87 +83,88 @@ Below is the Apex code for a Salesforce lead assignment trigger and a correspond
 
 **Apex Trigger (LeadAssignmentTrigger):**
 
-trigger LeadAssignmentTrigger on Lead (before insert) {
-    LeadAssignmentHandler.assignLeads(Trigger.new);
-}
+        trigger LeadAssignmentTrigger on Lead (before insert) {
+            LeadAssignmentHandler.assignLeads(Trigger.new);
+        }
 
 **Apex Class (LeadAssignmentHandler):**
 
-public class LeadAssignmentHandler {
-    public static void assignLeads(List<Lead> newLeads) {
-        Map<Id, Account> accountsById = new Map<Id, Account>();
-        List<Account> accountsWithLeads = [SELECT Id, Name, Pending_Leads_Count__c, Opportunity_Conversion_Date__c,
-                                           Geolocation__Latitude__s, Geolocation__Longitude__s
-                                           FROM Account
-                                           WHERE Status__c = 'Active'];
-        for (Account account : accountsWithLeads) {
-            accountsById.put(account.Id, account);
-        }
-        for (Lead lead : newLeads) {
-            for (Account account : accountsWithLeads) {
-                if (isWithin50Miles(lead, account) &&
-                    account.Pending_Leads_Count__c < 10 &&
-                    account.Opportunity_Conversion_Date__c <= Date.today().addDays(10)) {
-                    lead.AccountId = account.Id;
-                    account.Pending_Leads_Count__c++;
-                    break; // Assign the lead to the first suitable account and move to the next lead.
+        public class LeadAssignmentHandler {
+            public static void assignLeads(List<Lead> newLeads) {
+                Map<Id, Account> accountsById = new Map<Id, Account>();
+                List<Account> accountsWithLeads = [SELECT Id, Name, Pending_Leads_Count__c, Opportunity_Conversion_Date__c,
+                                                   Geolocation__Latitude__s, Geolocation__Longitude__s
+                                                   FROM Account
+                                                   WHERE Status__c = 'Active'];
+                for (Account account : accountsWithLeads) {
+                    accountsById.put(account.Id, account);
+                }
+                for (Lead lead : newLeads) {
+                    for (Account account : accountsWithLeads) {
+                        if (isWithin50Miles(lead, account) &&
+                            account.Pending_Leads_Count__c < 10 &&
+                            account.Opportunity_Conversion_Date__c <= Date.today().addDays(10)) {
+                            lead.AccountId = account.Id;
+                            account.Pending_Leads_Count__c++;
+                            break; // Assign the lead to the first suitable account and move to the next lead.
+                        }
+                    }
                 }
             }
+            private static Boolean isWithin50Miles(Lead lead, Account account) {
+                if (lead.Geolocation__Latitude__s != null && lead.Geolocation__Longitude__s != null &&
+                    account.Geolocation__Latitude__s != null && account.Geolocation__Longitude__s != null) {
+                    Double distance = calculateDistance(lead.Geolocation__Latitude__s, lead.Geolocation__Longitude__s,
+                                                        account.Geolocation__Latitude__s, account.Geolocation__Longitude__s);
+                    return distance <= 50.0;
+                }
+                return false;
+            }
+            private static Double calculateDistance(Double lat1, Double lon1, Double lat2, Double lon2) {
+                // Implementation to calculate distance using Haversine formula.
+                // You can find Haversine formula implementations online or use external libraries for more accurate calculations.
+                // For simplicity, I'm not providing the implementation here.
+                // It's important to note that Salesforce provides only basic math functions, and more complex formulas may require external libraries.
+                // Don't forget to handle error cases, such as null or invalid values for latitudes and longitudes.
+                return 0.0;
+            }
         }
-    }
-    private static Boolean isWithin50Miles(Lead lead, Account account) {
-        if (lead.Geolocation__Latitude__s != null && lead.Geolocation__Longitude__s != null &&
-            account.Geolocation__Latitude__s != null && account.Geolocation__Longitude__s != null) {
-            Double distance = calculateDistance(lead.Geolocation__Latitude__s, lead.Geolocation__Longitude__s,
-                                                account.Geolocation__Latitude__s, account.Geolocation__Longitude__s);
-            return distance <= 50.0;
-        }
-        return false;
-    }
-    private static Double calculateDistance(Double lat1, Double lon1, Double lat2, Double lon2) {
-        // Implementation to calculate distance using Haversine formula.
-        // You can find Haversine formula implementations online or use external libraries for more accurate calculations.
-        // For simplicity, I'm not providing the implementation here.
-        // It's important to note that Salesforce provides only basic math functions, and more complex formulas may require external libraries.
-        // Don't forget to handle error cases, such as null or invalid values for latitudes and longitudes.
-        return 0.0;
-    }
-}
 
 **Unit Test Cases:**
-@isTest
-private class LeadAssignmentHandlerTest {
-    @isTest
-    static void testLeadAssignment() {
-        // Create test data - Lead within 50-mile radius, active Account with less than 10 pending leads, and opportunity conversion date within 10 days.
-        Account testAccount = new Account(Name = 'Test Account', Status__c = 'Active', Geolocation__Latitude__s = 37.7749, Geolocation__Longitude__s = -122.4194);
-        insert testAccount;
-        Lead testLead = new Lead(LastName = 'Test Lead', Company = 'Test Company', Status = 'Open', Geolocation__Latitude__s = 37.7749, Geolocation__Longitude__s = -122.4194);
-        insert testLead;
-        // Test lead assignment trigger
-        Test.startTest();
-        List<Lead> leads = [SELECT Id, AccountId FROM Lead WHERE Id = :testLead.Id];
-        System.assertEquals(testAccount.Id, leads[0].AccountId);
-        Test.stopTest();
-    }
-    @isTest
-    static void testNoLeadAssignment() {
-        // Create test data - Lead outside 50-mile radius or Account with more than 10 pending leads, and opportunity conversion date greater than 10 days.
-        Account testAccount = new Account(Name = 'Test Account', Status__c = 'Active', Geolocation__Latitude__s = 38.9072, Geolocation__Longitude__s = -77.0369);
-        insert testAccount;
-        for (Integer i = 0; i < 11; i++) {
-            Lead testLead = new Lead(LastName = 'Test Lead ' + i, Company = 'Test Company ' + i, Status = 'Open', Geolocation__Latitude__s = 38.9072, Geolocation__Longitude__s = -77.0369);
-            insert testLead;
+
+        @isTest
+        private class LeadAssignmentHandlerTest {
+            @isTest
+            static void testLeadAssignment() {
+                // Create test data - Lead within 50-mile radius, active Account with less than 10 pending leads, and opportunity conversion date within 10 days.
+                Account testAccount = new Account(Name = 'Test Account', Status__c = 'Active', Geolocation__Latitude__s = 37.7749, Geolocation__Longitude__s = -122.4194);
+                insert testAccount;
+                Lead testLead = new Lead(LastName = 'Test Lead', Company = 'Test Company', Status = 'Open', Geolocation__Latitude__s = 37.7749, Geolocation__Longitude__s = -122.4194);
+                insert testLead;
+                // Test lead assignment trigger
+                Test.startTest();
+                List<Lead> leads = [SELECT Id, AccountId FROM Lead WHERE Id = :testLead.Id];
+                System.assertEquals(testAccount.Id, leads[0].AccountId);
+                Test.stopTest();
+            }
+            @isTest
+            static void testNoLeadAssignment() {
+                // Create test data - Lead outside 50-mile radius or Account with more than 10 pending leads, and opportunity conversion date greater than 10 days.
+                Account testAccount = new Account(Name = 'Test Account', Status__c = 'Active', Geolocation__Latitude__s = 38.9072, Geolocation__Longitude__s = -77.0369);
+                insert testAccount;
+                for (Integer i = 0; i < 11; i++) {
+                    Lead testLead = new Lead(LastName = 'Test Lead ' + i, Company = 'Test Company ' + i, Status = 'Open', Geolocation__Latitude__s = 38.9072, Geolocation__Longitude__s = -77.0369);
+                    insert testLead;
+                }
+                Lead testLead = new Lead(LastName = 'Test Lead', Company = 'Test Company', Status = 'Open', Geolocation__Latitude__s = 38.9072, Geolocation__Longitude__s = -77.0369);
+                insert testLead;
+                // Test lead assignment trigger
+                Test.startTest();
+                List<Lead> leads = [SELECT Id, AccountId FROM Lead WHERE Id = :testLead.Id];
+                System.assertEquals(null, leads[0].AccountId);
+                Test.stopTest();
+            }
         }
-        Lead testLead = new Lead(LastName = 'Test Lead', Company = 'Test Company', Status = 'Open', Geolocation__Latitude__s = 38.9072, Geolocation__Longitude__s = -77.0369);
-        insert testLead;
-        // Test lead assignment trigger
-        Test.startTest();
-        List<Lead> leads = [SELECT Id, AccountId FROM Lead WHERE Id = :testLead.Id];
-        System.assertEquals(null, leads[0].AccountId);
-        Test.stopTest();
-    }
-}
 
 ** Please note that the implementation for the calculateDistance method (used for calculating the distance between two geographical points) is not provided here. You can find Haversine formula implementations online or use external libraries for more accurate calculations.**
 
@@ -186,76 +187,78 @@ Also, ensure that the fields Pending_Leads_Count__c, Opportunity_Conversion_Date
 Below is the Apex trigger and corresponding Apex class to handle the requirement of triggering an external API endpoint whenever an Account is deactivated. Additionally, I've included unit test cases to test the trigger and class.
 
 **Apex Trigger (AccountDeactivationTrigger):**
-trigger AccountDeactivationTrigger on Account (after update) {
-    AccountDeactivationHandler.handleDeactivation(Trigger.new, Trigger.oldMap);
-}
+
+        trigger AccountDeactivationTrigger on Account (after update) {
+            AccountDeactivationHandler.handleDeactivation(Trigger.new, Trigger.oldMap);
+        }
 
 **Apex Class (AccountDeactivationHandler):**
-public class AccountDeactivationHandler {
-    public static void handleDeactivation(List<Account> newAccounts, Map<Id, Account> oldAccountsMap) {
-        List<Account> deactivatedAccounts = new List<Account>();
-        List<Contact> impactedContacts = new List<Contact>();
-        for (Account newAccount : newAccounts) {
-            // Check if the account is deactivated (Status__c field changed from 'Active' to 'Inactive')
-            if (newAccount.Status__c == 'Inactive' && oldAccountsMap.get(newAccount.Id).Status__c == 'Active') {
-                deactivatedAccounts.add(newAccount);
-            }
-        }
-        if (!deactivatedAccounts.isEmpty()) {
-            // Collect the required information for the API payload
-            List<Map<String, Object>> payloadData = new List<Map<String, Object>>();
-            for (Account acc : deactivatedAccounts) {
-                Map<String, Object> payloadEntry = new Map<String, Object>();
-                payloadEntry.put('accountId', acc.Id);
-                payloadEntry.put('accountName', acc.Name);
-                payloadEntry.put('deactivatedDate', Date.today());
-                payloadData.add(payloadEntry);
-                // Collect all impacted contacts for disabling
-                impactedContacts.addAll([SELECT Id FROM Contact WHERE AccountId = :acc.Id]);
-            }
-            // Call the external API endpoint with the payload
-            makeAPICallout(payloadData);
-            // Disable associated contacts
-            if (!impactedContacts.isEmpty()) {
-                for (Contact contact : impactedContacts) {
-                    contact.IsActive = false;
+
+        public class AccountDeactivationHandler {
+            public static void handleDeactivation(List<Account> newAccounts, Map<Id, Account> oldAccountsMap) {
+                List<Account> deactivatedAccounts = new List<Account>();
+                List<Contact> impactedContacts = new List<Contact>();
+                for (Account newAccount : newAccounts) {
+                    // Check if the account is deactivated (Status__c field changed from 'Active' to 'Inactive')
+                    if (newAccount.Status__c == 'Inactive' && oldAccountsMap.get(newAccount.Id).Status__c == 'Active') {
+                        deactivatedAccounts.add(newAccount);
+                    }
                 }
-                update impactedContacts;
+                if (!deactivatedAccounts.isEmpty()) {
+                    // Collect the required information for the API payload
+                    List<Map<String, Object>> payloadData = new List<Map<String, Object>>();
+                    for (Account acc : deactivatedAccounts) {
+                        Map<String, Object> payloadEntry = new Map<String, Object>();
+                        payloadEntry.put('accountId', acc.Id);
+                        payloadEntry.put('accountName', acc.Name);
+                        payloadEntry.put('deactivatedDate', Date.today());
+                        payloadData.add(payloadEntry);
+                        // Collect all impacted contacts for disabling
+                        impactedContacts.addAll([SELECT Id FROM Contact WHERE AccountId = :acc.Id]);
+                    }
+                    // Call the external API endpoint with the payload
+                    makeAPICallout(payloadData);
+                    // Disable associated contacts
+                    if (!impactedContacts.isEmpty()) {
+                        for (Contact contact : impactedContacts) {
+                            contact.IsActive = false;
+                        }
+                        update impactedContacts;
+                    }
+                }
+            }
+            // Method to perform the API callout (sample implementation)
+            private static void makeAPICallout(List<Map<String, Object>> payloadData) {
+                // Replace this code with the actual API callout implementation
+                // You can use HttpCalloutMock to mock the API callout in your unit tests.
+                // For simplicity, we'll just print the payloadData in this example.
+                System.debug('API Payload Data: ' + payloadData);
             }
         }
-    }
-    // Method to perform the API callout (sample implementation)
-    private static void makeAPICallout(List<Map<String, Object>> payloadData) {
-        // Replace this code with the actual API callout implementation
-        // You can use HttpCalloutMock to mock the API callout in your unit tests.
-        // For simplicity, we'll just print the payloadData in this example.
-        System.debug('API Payload Data: ' + payloadData);
-    }
-}
 **Unit Test Cases:**
 
-@isTest
-private class AccountDeactivationHandlerTest {
-    @isTest
-    static void testAccountDeactivation() {
-        // Create test data - Active Account
-        Account testAccount = new Account(Name = 'Test Account', Status__c = 'Active');
-        insert testAccount;
-        // Change Account Status to 'Inactive'
-        testAccount.Status__c = 'Inactive';
-        Test.startTest();
-        update testAccount;
-        Test.stopTest();
-        // Verify if the API callout was made (You may use HttpCalloutMock to mock API callouts)
-        // For the purpose of this example, we'll check the debug log.
-        List<LogEntry> logs = [SELECT Id, Application, DurationMilliseconds, Location, LogUserId, Operation, Request, StartTime, Status FROM ApexLog];
-        String payloadData = 'accountId=' + testAccount.Id + ', accountName=' + testAccount.Name + ', deactivatedDate=' + Date.today();
-        System.assertEquals(true, logs[0].Request.contains(payloadData));
-        // Verify if the associated contacts were disabled
-        List<Contact> associatedContacts = [SELECT Id, IsActive FROM Contact WHERE AccountId = :testAccount.Id];
-        for (Contact contact : associatedContacts) {
-            System.assertEquals(false, contact.IsActive);
+        @isTest
+        private class AccountDeactivationHandlerTest {
+            @isTest
+            static void testAccountDeactivation() {
+                // Create test data - Active Account
+                Account testAccount = new Account(Name = 'Test Account', Status__c = 'Active');
+                insert testAccount;
+                // Change Account Status to 'Inactive'
+                testAccount.Status__c = 'Inactive';
+                Test.startTest();
+                update testAccount;
+                Test.stopTest();
+                // Verify if the API callout was made (You may use HttpCalloutMock to mock API callouts)
+                // For the purpose of this example, we'll check the debug log.
+                List<LogEntry> logs = [SELECT Id, Application, DurationMilliseconds, Location, LogUserId, Operation, Request, StartTime, Status FROM ApexLog];
+                String payloadData = 'accountId=' + testAccount.Id + ', accountName=' + testAccount.Name + ', deactivatedDate=' + Date.today();
+                System.assertEquals(true, logs[0].Request.contains(payloadData));
+                // Verify if the associated contacts were disabled
+                List<Contact> associatedContacts = [SELECT Id, IsActive FROM Contact WHERE AccountId = :testAccount.Id];
+                for (Contact contact : associatedContacts) {
+                    System.assertEquals(false, contact.IsActive);
+                }
+            }
         }
-    }
-}
 Note: For the makeAPICallout method, you should replace the sample implementation with the actual API callout logic using the Http callouts or HttpCalloutMock to test the callout behavior. The provided implementation in the example just prints the payload data to the debug log for simplicity. Additionally, ensure that the Status__c field is present on the Account object and IsActive field is present on the Contact object before running the tests.
