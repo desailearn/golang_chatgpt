@@ -66,30 +66,16 @@ Here are some salesforce examples:
                 **        Response Output (Screenshot - 4 ):        **
                        ![Output 4](Output_sf_usecase_1d.png)   
 
-**  Use Case 2: Write a salesforce triggers and sync data with other systems: **
 
-        Write a salesforce trigger with the  below requirements
-                Whenever an  account is deactivated trigger an external API end-point with the below payload 
-                    accountID 
-                    accountname
-                    deactivatedDate
-                    array: impactedContacts
-                Diabale all the associated contacts
-                Write unit test cases for triggers and classes.
-                
-**        Command line Input:  (Screenshot)   **   
-**        Response Output:        **
+**  Use Case 2: Write a salesforce Lead assignment: **
 
-
-**  Use Case 3: Write a salesforce Lead assignment : **
-
-        Write a salesforce lead assignment trigger for below requirements
-                Whenever new lead is created assign based on these logic 
-                    Accounts status is active state
-                    Accounts near by zip within 50 mile radius
-                    Accounts with no more than 10 pending leads 
-                    Accounts has with maximus oprtunity conversion no greater than 10 caleder days. 
-                Write unit test cases for triggers and classes.
+       Write a salesforce lead assignment trigger for the below requirements.
+            Whenever a new lead is created assign based on this logic 
+                Account status must be active
+                Accounts nearby zip within a 50-mile radius
+                Accounts with no more than 10 pending leads 
+                Accounts have max opportunity conversion of no greater than 10 calendar days. 
+            Write unit test cases for triggers and classes.
                 
 **        Response Output:        **
 
@@ -179,7 +165,97 @@ private class LeadAssignmentHandlerTest {
     }
 }
 
-
 ** Please note that the implementation for the calculateDistance method (used for calculating the distance between two geographical points) is not provided here. You can find Haversine formula implementations online or use external libraries for more accurate calculations.**
 
 Also, ensure that the fields Pending_Leads_Count__c, Opportunity_Conversion_Date__c, and Geolocation__Latitude__s/Geolocation__Longitude__s are appropriately defined on the Account and Lead objects before running the tests.
+
+
+**  Use Case 3: Write a salesforce trigger and sync data with other systems: **
+
+        Write a salesforce trigger with the  below requirements
+                Whenever an  account is deactivated trigger an external API end-point with the below payload 
+                    accountID 
+                    accountname
+                    deactivatedDate
+                    array: impactedContacts
+                Diabale all the associated contacts
+                Write unit test cases for triggers and classes.
+                
+**        Response Output:        **
+
+Below is the Apex trigger and corresponding Apex class to handle the requirement of triggering an external API endpoint whenever an Account is deactivated. Additionally, I've included unit test cases to test the trigger and class.
+
+**Apex Trigger (AccountDeactivationTrigger):**
+trigger AccountDeactivationTrigger on Account (after update) {
+    AccountDeactivationHandler.handleDeactivation(Trigger.new, Trigger.oldMap);
+}
+
+**Apex Class (AccountDeactivationHandler):**
+public class AccountDeactivationHandler {
+    public static void handleDeactivation(List<Account> newAccounts, Map<Id, Account> oldAccountsMap) {
+        List<Account> deactivatedAccounts = new List<Account>();
+        List<Contact> impactedContacts = new List<Contact>();
+        for (Account newAccount : newAccounts) {
+            // Check if the account is deactivated (Status__c field changed from 'Active' to 'Inactive')
+            if (newAccount.Status__c == 'Inactive' && oldAccountsMap.get(newAccount.Id).Status__c == 'Active') {
+                deactivatedAccounts.add(newAccount);
+            }
+        }
+        if (!deactivatedAccounts.isEmpty()) {
+            // Collect the required information for the API payload
+            List<Map<String, Object>> payloadData = new List<Map<String, Object>>();
+            for (Account acc : deactivatedAccounts) {
+                Map<String, Object> payloadEntry = new Map<String, Object>();
+                payloadEntry.put('accountId', acc.Id);
+                payloadEntry.put('accountName', acc.Name);
+                payloadEntry.put('deactivatedDate', Date.today());
+                payloadData.add(payloadEntry);
+                // Collect all impacted contacts for disabling
+                impactedContacts.addAll([SELECT Id FROM Contact WHERE AccountId = :acc.Id]);
+            }
+            // Call the external API endpoint with the payload
+            makeAPICallout(payloadData);
+            // Disable associated contacts
+            if (!impactedContacts.isEmpty()) {
+                for (Contact contact : impactedContacts) {
+                    contact.IsActive = false;
+                }
+                update impactedContacts;
+            }
+        }
+    }
+    // Method to perform the API callout (sample implementation)
+    private static void makeAPICallout(List<Map<String, Object>> payloadData) {
+        // Replace this code with the actual API callout implementation
+        // You can use HttpCalloutMock to mock the API callout in your unit tests.
+        // For simplicity, we'll just print the payloadData in this example.
+        System.debug('API Payload Data: ' + payloadData);
+    }
+}
+**Unit Test Cases:**
+
+@isTest
+private class AccountDeactivationHandlerTest {
+    @isTest
+    static void testAccountDeactivation() {
+        // Create test data - Active Account
+        Account testAccount = new Account(Name = 'Test Account', Status__c = 'Active');
+        insert testAccount;
+        // Change Account Status to 'Inactive'
+        testAccount.Status__c = 'Inactive';
+        Test.startTest();
+        update testAccount;
+        Test.stopTest();
+        // Verify if the API callout was made (You may use HttpCalloutMock to mock API callouts)
+        // For the purpose of this example, we'll check the debug log.
+        List<LogEntry> logs = [SELECT Id, Application, DurationMilliseconds, Location, LogUserId, Operation, Request, StartTime, Status FROM ApexLog];
+        String payloadData = 'accountId=' + testAccount.Id + ', accountName=' + testAccount.Name + ', deactivatedDate=' + Date.today();
+        System.assertEquals(true, logs[0].Request.contains(payloadData));
+        // Verify if the associated contacts were disabled
+        List<Contact> associatedContacts = [SELECT Id, IsActive FROM Contact WHERE AccountId = :testAccount.Id];
+        for (Contact contact : associatedContacts) {
+            System.assertEquals(false, contact.IsActive);
+        }
+    }
+}
+Note: For the makeAPICallout method, you should replace the sample implementation with the actual API callout logic using the Http callouts or HttpCalloutMock to test the callout behavior. The provided implementation in the example just prints the payload data to the debug log for simplicity. Additionally, ensure that the Status__c field is present on the Account object and IsActive field is present on the Contact object before running the tests.
